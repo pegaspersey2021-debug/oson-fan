@@ -4,11 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Oson Fan — 3D va AR Interaktiv Platforma</title>
-    <!-- Google Model-Viewer kutubxonasi (AR va .glb modellar uchun) -->
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
-    <!-- Three.js (Haqiqiy geometrik 3D shakllarni joyida yaratish uchun) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js"></script>
     <style>
         :root {
@@ -33,13 +30,13 @@
         header {
             background: linear-gradient(135deg, var(--primary), var(--secondary));
             color: white;
-            padding: 1.5rem 1rem;
+            padding: 1.4rem 1rem;
             text-align: center;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
         header h1 {
             font-size: 1.9rem;
-            margin-bottom: 0.3rem;
+            margin-bottom: 0.25rem;
             letter-spacing: 0.5px;
         }
         header p {
@@ -47,27 +44,49 @@
             opacity: 0.92;
         }
         .container {
-            max-width: 1000px;
-            margin: 1.5rem auto;
+            max-width: 1050px;
+            margin: 1.2rem auto;
             padding: 0 1rem;
+        }
+        .filter-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            justify-content: center;
+            margin-bottom: 0.9rem;
+        }
+        .filter-btn {
+            background: #e2e8f0;
+            border: none;
+            color: #334155;
+            padding: 0.45rem 1rem;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 0.88rem;
+            transition: 0.2s;
+        }
+        .filter-btn.active, .filter-btn:hover {
+            background: var(--primary);
+            color: white;
         }
         .tabs {
             display: flex;
             flex-wrap: wrap;
-            gap: 0.5rem;
-            margin-bottom: 1.5rem;
+            gap: 0.45rem;
+            margin-bottom: 1.3rem;
             justify-content: center;
         }
         .tab-btn {
             background: var(--card);
-            border: 2px solid var(--secondary);
+            border: 1.5px solid var(--secondary);
             color: var(--secondary);
-            padding: 0.6rem 1.1rem;
-            border-radius: 25px;
+            padding: 0.5rem 0.95rem;
+            border-radius: 20px;
             cursor: pointer;
             font-weight: 600;
             transition: all 0.2s;
-            font-size: 0.95rem;
+            font-size: 0.88rem;
         }
         .tab-btn.active, .tab-btn:hover {
             background: var(--secondary);
@@ -79,15 +98,27 @@
             padding: 1.5rem;
             box-shadow: 0 10px 25px rgba(0,0,0,0.06);
         }
+        .top-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 0.4rem;
+        }
         .subject-badge {
             display: inline-block;
             background: #dbeafe;
             color: var(--primary);
-            padding: 0.25rem 0.75rem;
+            padding: 0.25rem 0.8rem;
             border-radius: 12px;
             font-size: 0.85rem;
             font-weight: 700;
-            margin-bottom: 0.5rem;
+        }
+        .topic-counter {
+            font-size: 0.85rem;
+            color: #64748b;
+            font-weight: 600;
         }
         h2#topic-title {
             font-size: 1.5rem;
@@ -133,7 +164,7 @@
             position: absolute;
             top: 12px;
             left: 12px;
-            background: rgba(30, 58, 138, 0.82);
+            background: rgba(30, 58, 138, 0.85);
             color: white;
             font-size: 0.8rem;
             padding: 4px 10px;
@@ -241,12 +272,24 @@
 </header>
 
 <div class="container">
+    <!-- Fanlar bo'yicha filtr -->
+    <div class="filter-bar" id="subject-filters">
+        <button class="filter-btn active" onclick="filterByCategory('all', this)">🌐 Barchasi (11)</button>
+        <button class="filter-btn" onclick="filterByCategory('Geometriya', this)">📐 Geometriya (5)</button>
+        <button class="filter-btn" onclick="filterByCategory('Biologiya', this)">🧬 Biologiya (2)</button>
+        <button class="filter-btn" onclick="filterByCategory('Kimyo', this)">⚗️ Kimyo (3)</button>
+        <button class="filter-btn" onclick="filterByCategory('Fizika', this)">🪐 Fizika (1)</button>
+    </div>
+
     <!-- Mavzular menyusi -->
     <div class="tabs" id="topic-tabs"></div>
 
     <!-- Asosiy oyna -->
     <div class="main-card">
-        <span class="subject-badge" id="subject-name">Matematika</span>
+        <div class="top-meta">
+            <span class="subject-badge" id="subject-name">Geometriya</span>
+            <span class="topic-counter" id="topic-counter">1 / 11</span>
+        </div>
         <h2 id="topic-title">Mavzu nomi</h2>
 
         <!-- 3D va AR ko'rish oynasi -->
@@ -292,66 +335,104 @@
 </footer>
 
 <script>
-    // Haqiqiy 3D fan modellarini brauzerning o'zida .glb formatda yaratib beruvchi generator
-    // (Hech qanday tashqi fayl yuklanmasa ham, piramida, shar, molekula, DNK va quyosh sistemasi jonli 3D ko'rinadi!)
     function generateScienceGLB(type, callback) {
         const scene = new THREE.Scene();
 
         if (type === 'pyramid') {
-            // Muntazam to'rtburchakli piramida + ichki balandlik va apofema chiziqlari
-            const geom = new THREE.ConeGeometry(1.2, 1.8, 4);
-            const mat = new THREE.MeshStandardMaterial({
-                color: 0x2563eb,
-                transparent: true,
-                opacity: 0.65,
-                roughness: 0.3,
-                metalness: 0.1
-            });
+            // 1. Muntazam piramida
+            const geom = new THREE.ConeGeometry(1.15, 1.75, 4);
+            const mat = new THREE.MeshStandardMaterial({ color: 0x2563eb, transparent: true, opacity: 0.65, roughness: 0.3 });
             const pyramid = new THREE.Mesh(geom, mat);
             pyramid.rotation.y = Math.PI / 4;
             scene.add(pyramid);
 
-            // Qirralarini aniq ko'rsatish uchun chiziqlar
-            const edges = new THREE.EdgesGeometry(geom);
-            const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x0f172a }));
+            const line = new THREE.LineSegments(new THREE.EdgesGeometry(geom), new THREE.LineBasicMaterial({ color: 0x0f172a }));
             line.rotation.y = Math.PI / 4;
             scene.add(line);
 
-            // Ichki balandlik (qizil o'q)
-            const hGeom = new THREE.CylinderGeometry(0.025, 0.025, 1.8, 12);
-            const hMat = new THREE.MeshBasicMaterial({ color: 0xdc2626 });
-            const hLine = new THREE.Mesh(hGeom, hMat);
+            const hLine = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 1.75, 12), new THREE.MeshBasicMaterial({ color: 0xdc2626 }));
             scene.add(hLine);
 
-        } else if (type === 'sphere') {
-            // Shar va uning ichidagi ekvator hamda radiusi
-            const sGeom = new THREE.SphereGeometry(1.2, 32, 24);
-            const sMat = new THREE.MeshStandardMaterial({
-                color: 0x059669,
-                transparent: true,
-                opacity: 0.55,
-                roughness: 0.2
-            });
-            const sphere = new THREE.Mesh(sGeom, sMat);
-            scene.add(sphere);
+        } else if (type === 'truncated_pyramid') {
+            // 2. Kesik piramida
+            const geom = new THREE.CylinderGeometry(0.65, 1.25, 1.45, 4);
+            const mat = new THREE.MeshStandardMaterial({ color: 0x7c3aed, transparent: true, opacity: 0.65, roughness: 0.3 });
+            const frustum = new THREE.Mesh(geom, mat);
+            frustum.rotation.y = Math.PI / 4;
+            scene.add(frustum);
 
-            // Ekvator halqasi
-            const torusGeom = new THREE.TorusGeometry(1.2, 0.02, 16, 64);
-            const torusMat = new THREE.MeshBasicMaterial({ color: 0x1e3a8a });
-            const ring1 = new THREE.Mesh(torusGeom, torusMat);
+            const line = new THREE.LineSegments(new THREE.EdgesGeometry(geom), new THREE.LineBasicMaterial({ color: 0x0f172a }));
+            line.rotation.y = Math.PI / 4;
+            scene.add(line);
+
+            const hLine = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 1.45, 12), new THREE.MeshBasicMaterial({ color: 0xdc2626 }));
+            scene.add(hLine);
+
+        } else if (type === 'cylinder') {
+            // 3. Silindr (radius va balandlik chiziqlari bilan)
+            const geom = new THREE.CylinderGeometry(0.85, 0.85, 1.75, 36);
+            const mat = new THREE.MeshStandardMaterial({ color: 0x0284c7, transparent: true, opacity: 0.6, roughness: 0.25 });
+            const cyl = new THREE.Mesh(geom, mat);
+            scene.add(cyl);
+
+            // Yuqori va pastki halqalar
+            const ringMat = new THREE.MeshBasicMaterial({ color: 0x0f172a });
+            [0.875, -0.875].forEach(yPos => {
+                const ring = new THREE.Mesh(new THREE.TorusGeometry(0.85, 0.018, 12, 48), ringMat);
+                ring.rotation.x = Math.PI / 2;
+                ring.position.y = yPos;
+                scene.add(ring);
+            });
+
+            // O'q (balandlik h - qizil)
+            const hLine = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 1.75, 12), new THREE.MeshBasicMaterial({ color: 0xdc2626 }));
+            scene.add(hLine);
+
+            // Radius (R - sariq)
+            const rLine = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.85, 12), new THREE.MeshBasicMaterial({ color: 0xeab308 }));
+            rLine.rotation.z = Math.PI / 2;
+            rLine.position.set(0.425, -0.875, 0);
+            scene.add(rLine);
+
+        } else if (type === 'cone') {
+            // 4. Konus (balandlik h, radius R, yasovchi l)
+            const geom = new THREE.ConeGeometry(0.95, 1.8, 36);
+            const mat = new THREE.MeshStandardMaterial({ color: 0xd97706, transparent: true, opacity: 0.62, roughness: 0.25 });
+            const cone = new THREE.Mesh(geom, mat);
+            scene.add(cone);
+
+            const baseRing = new THREE.Mesh(new THREE.TorusGeometry(0.95, 0.018, 12, 48), new THREE.MeshBasicMaterial({ color: 0x0f172a }));
+            baseRing.rotation.x = Math.PI / 2;
+            baseRing.position.y = -0.9;
+            scene.add(baseRing);
+
+            // Balandlik h (qizil)
+            const hLine = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 1.8, 12), new THREE.MeshBasicMaterial({ color: 0xdc2626 }));
+            scene.add(hLine);
+
+            // Radius R (ko'k)
+            const rLine = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.95, 12), new THREE.MeshBasicMaterial({ color: 0x1d4ed8 }));
+            rLine.rotation.z = Math.PI / 2;
+            rLine.position.set(0.475, -0.9, 0);
+            scene.add(rLine);
+
+        } else if (type === 'sphere') {
+            // 5. Shar va Sfera
+            const sGeom = new THREE.SphereGeometry(1.15, 32, 24);
+            const sMat = new THREE.MeshStandardMaterial({ color: 0x059669, transparent: true, opacity: 0.55, roughness: 0.2 });
+            scene.add(new THREE.Mesh(sGeom, sMat));
+
+            const ring1 = new THREE.Mesh(new THREE.TorusGeometry(1.15, 0.02, 16, 64), new THREE.MeshBasicMaterial({ color: 0x1e3a8a }));
             ring1.rotation.x = Math.PI / 2;
             scene.add(ring1);
 
-            // Radius chizig'i (sariq)
-            const rGeom = new THREE.CylinderGeometry(0.025, 0.025, 1.2, 12);
-            const rMat = new THREE.MeshBasicMaterial({ color: 0xeab308 });
-            const rLine = new THREE.Mesh(rGeom, rMat);
+            const rLine = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 1.15, 12), new THREE.MeshBasicMaterial({ color: 0xeab308 }));
             rLine.rotation.z = Math.PI / 2;
-            rLine.position.x = 0.6;
+            rLine.position.x = 0.575;
             scene.add(rLine);
 
         } else if (type === 'dna') {
-            // Biologiya: DNK qo'sh spirali 3D modeli
+            // 6. Biologiya: DNK qo'sh spirali
             const group = new THREE.Group();
             const matBlue = new THREE.MeshStandardMaterial({ color: 0x2563eb });
             const matRed = new THREE.MeshStandardMaterial({ color: 0xdc2626 });
@@ -371,9 +452,7 @@
                 b2.position.set(-x1, y, -z1);
                 group.add(b2);
 
-                // Bog'lovchi ko'prik
-                const barGeom = new THREE.CylinderGeometry(0.025, 0.025, 1.3, 8);
-                const bar = new THREE.Mesh(barGeom, matGray);
+                const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 1.3, 8), matGray);
                 bar.position.set(0, y, 0);
                 bar.rotation.z = Math.PI / 2;
                 bar.rotation.y = -angle;
@@ -381,17 +460,36 @@
             }
             scene.add(group);
 
-        } else if (type === 'molecule') {
-            // Kimyo: H2O (Suv molekulasi - 104.5 gradus burchak ostida)
-            const oxygen = new THREE.Mesh(
-                new THREE.SphereGeometry(0.55, 32, 32),
-                new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.2 })
+        } else if (type === 'cell') {
+            // 7. Biologiya: Tirik hujayra tuzilishi (qobiq, sitoplazma, yadro, mitoxondriya)
+            const membrane = new THREE.Mesh(
+                new THREE.SphereGeometry(1.25, 32, 24),
+                new THREE.MeshStandardMaterial({ color: 0x10b981, transparent: true, opacity: 0.35, roughness: 0.2 })
             );
-            scene.add(oxygen);
+            scene.add(membrane);
 
+            // Markaziy yadro (binafsha)
+            const nucleus = new THREE.Mesh(
+                new THREE.SphereGeometry(0.45, 24, 24),
+                new THREE.MeshStandardMaterial({ color: 0x7c3aed, roughness: 0.3 })
+            );
+            scene.add(nucleus);
+
+            // Mitoxondriyalar (to'q sariq kapsulalar)
+            const mitoMat = new THREE.MeshStandardMaterial({ color: 0xf97316 });
+            const positions = [[0.65, 0.4, 0.3], [-0.7, -0.35, 0.4], [0.2, -0.75, -0.45], [-0.45, 0.6, -0.4]];
+            positions.forEach((p, idx) => {
+                const mito = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.28, 12), mitoMat);
+                mito.position.set(p[0], p[1], p[2]);
+                mito.rotation.set(idx, idx * 0.7, 0.5);
+                scene.add(mito);
+            });
+
+        } else if (type === 'molecule_h2o') {
+            // 8. Kimyo: H2O (Suv)
+            scene.add(new THREE.Mesh(new THREE.SphereGeometry(0.55, 32, 32), new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.2 })));
             const hMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.2 });
             const bondMat = new THREE.MeshStandardMaterial({ color: 0x64748b });
-
             const halfAngle = (104.5 / 2) * (Math.PI / 180);
             const dist = 1.15;
 
@@ -408,32 +506,65 @@
                 scene.add(bond);
             });
 
-        } else if (type === 'solar') {
-            // Fizika: Quyosh va sayyoralar orbitalari
-            const sun = new THREE.Mesh(
-                new THREE.SphereGeometry(0.45, 32, 32),
-                new THREE.MeshBasicMaterial({ color: 0xf59e0b })
-            );
-            scene.add(sun);
+        } else if (type === 'molecule_ch4') {
+            // 9. Kimyo: CH4 (Metan - tetraedr)
+            scene.add(new THREE.Mesh(new THREE.SphereGeometry(0.5, 32, 32), new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.3 })));
+            const hMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.2 });
+            const bondMat = new THREE.MeshStandardMaterial({ color: 0x64748b });
 
+            const dirs = [
+                new THREE.Vector3(0, 1, 0),
+                new THREE.Vector3(0.9428, -0.3333, 0),
+                new THREE.Vector3(-0.4714, -0.3333, 0.8165),
+                new THREE.Vector3(-0.4714, -0.3333, -0.8165)
+            ];
+            const dist = 1.2;
+            dirs.forEach(d => {
+                const pos = d.clone().multiplyScalar(dist);
+                const hAtom = new THREE.Mesh(new THREE.SphereGeometry(0.28, 24, 24), hMat);
+                hAtom.position.copy(pos);
+                scene.add(hAtom);
+
+                const bond = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, dist, 12), bondMat);
+                bond.position.copy(d.clone().multiplyScalar(dist / 2));
+                bond.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.clone().normalize());
+                scene.add(bond);
+            });
+
+        } else if (type === 'molecule_co2') {
+            // 10. Kimyo: CO2 (Karbonat angidrid - chiziqli 180 gradus)
+            scene.add(new THREE.Mesh(new THREE.SphereGeometry(0.48, 32, 32), new THREE.MeshStandardMaterial({ color: 0x1e293b })));
+            const oMat = new THREE.MeshStandardMaterial({ color: 0xdc2626 });
+            const bondMat = new THREE.MeshStandardMaterial({ color: 0x64748b });
+
+            [-1.25, 1.25].forEach(xPos => {
+                const oAtom = new THREE.Mesh(new THREE.SphereGeometry(0.42, 24, 24), oMat);
+                oAtom.position.set(xPos, 0, 0);
+                scene.add(oAtom);
+
+                // Qo'sh bog' (2 ta tayoqcha)
+                [-0.08, 0.08].forEach(zOff => {
+                    const bond = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 1.25, 12), bondMat);
+                    bond.position.set(xPos / 2, 0, zOff);
+                    bond.rotation.z = Math.PI / 2;
+                    scene.add(bond);
+                });
+            });
+
+        } else if (type === 'solar') {
+            // 11. Fizika: Quyosh sistemasi
+            scene.add(new THREE.Mesh(new THREE.SphereGeometry(0.45, 32, 32), new THREE.MeshBasicMaterial({ color: 0xf59e0b })));
             const planets = [
                 { r: 0.85, size: 0.11, color: 0x3b82f6, angle: 0.5 },
                 { r: 1.25, size: 0.15, color: 0xef4444, angle: 2.3 },
                 { r: 1.65, size: 0.22, color: 0xd97706, angle: 4.1 }
             ];
-
             planets.forEach(p => {
-                const orbit = new THREE.Mesh(
-                    new THREE.TorusGeometry(p.r, 0.012, 8, 64),
-                    new THREE.MeshBasicMaterial({ color: 0x94a3b8 })
-                );
+                const orbit = new THREE.Mesh(new THREE.TorusGeometry(p.r, 0.012, 8, 64), new THREE.MeshBasicMaterial({ color: 0x94a3b8 }));
                 orbit.rotation.x = Math.PI / 2;
                 scene.add(orbit);
 
-                const planet = new THREE.Mesh(
-                    new THREE.SphereGeometry(p.size, 24, 24),
-                    new THREE.MeshStandardMaterial({ color: p.color })
-                );
+                const planet = new THREE.Mesh(new THREE.SphereGeometry(p.size, 24, 24), new THREE.MeshStandardMaterial({ color: p.color }));
                 planet.position.set(Math.cos(p.angle) * p.r, 0, Math.sin(p.angle) * p.r);
                 scene.add(planet);
             });
@@ -442,19 +573,20 @@
         const exporter = new THREE.GLTFExporter();
         exporter.parse(scene, function (result) {
             const blob = new Blob([result], { type: 'model/gltf-binary' });
-            const url = URL.createObjectURL(blob);
-            callback(url);
+            callback(URL.createObjectURL(blob));
         }, { binary: true });
     }
 
     const topics = [
         {
-            id: "geometriya-1",
+            id: 1,
+            category: "Geometriya",
             subject: "Geometriya (10-sinf)",
+            shortName: "1. Piramida",
             title: "Muntazam To‘rtburchakli Piramida",
             modelType: "pyramid",
-            desc: "Asosi muntazam to‘rtburchakdan (kvadratdan), yon yoqlari esa teng yonli uchburchaklardan iborat fazoviy jism. Qizil chiziq piramidaning balandligini (h) ko‘rsatadi.",
-            formula: "Piramida hajmi: V = (1/3) · S_asos · h",
+            desc: "Asosi kvadratdan, yon yoqlari esa teng yonli uchburchaklardan iborat fazoviy jism. Qizil kesma piramidaning balandligini (h) ko‘rsatadi.",
+            formula: "V = (1/3) · S_asos · h   |   S_to‘la = S_asos + S_yon",
             question: "Asosining yuzi 24 sm² va balandligi 5 sm bo‘lgan piramidaning hajmini toping.",
             options: [
                 { text: "A) 40 sm³", correct: true },
@@ -463,12 +595,62 @@
             ]
         },
         {
-            id: "geometriya-2",
+            id: 2,
+            category: "Geometriya",
+            subject: "Geometriya (10-sinf)",
+            shortName: "2. Kesik piramida",
+            title: "Muntazam Kesik Piramida",
+            modelType: "truncated_pyramid",
+            desc: "Piramidani asosiga parallel tekislik bilan kesish natijasida hosil bo‘lgan jism. Uning ikkita o‘xshash asosi (S₁ va S₂) hamda balandligi (h) mavjud.",
+            formula: "V = (1/3) · h · (S₁ + √(S₁·S₂) + S₂)",
+            question: "Asoslarining yuzlari 4 sm² va 16 sm², balandligi 3 sm bo‘lgan kesik piramida hajmini toping.",
+            options: [
+                { text: "A) 28 sm³", correct: true },
+                { text: "B) 60 sm³", correct: false },
+                { text: "C) 20 sm³", correct: false }
+            ]
+        },
+        {
+            id: 3,
+            category: "Geometriya",
             subject: "Geometriya (11-sinf)",
+            shortName: "3. Silindr",
+            title: "To‘g‘ri Doiraviy Silindr",
+            modelType: "cylinder",
+            desc: "To‘g‘ri to‘rtburchakni uning bir tomoni atrofida aylantirishdan hosil bo‘lgan jism. Sariq kesma asos radiusini (R), qizil kesma esa o‘q balandligini (h) bildiradi.",
+            formula: "V = π · R² · h   |   S_yon = 2 · π · R · h",
+            question: "Asosining radiusi 2 sm va balandligi 5 sm bo‘lgan silindrning hajmini toping.",
+            options: [
+                { text: "A) 20π sm³", correct: true },
+                { text: "B) 10π sm³", correct: false },
+                { text: "C) 40π sm³", correct: false }
+            ]
+        },
+        {
+            id: 4,
+            category: "Geometriya",
+            subject: "Geometriya (11-sinf)",
+            shortName: "4. Konus",
+            title: "To‘g‘ri Doiraviy Konus",
+            modelType: "cone",
+            desc: "To‘g‘ri burchakli uchburchakni katetlaridan biri atrofida aylantirishdan hosil bo‘lgan jism. Ko‘k kesma radius (R), qizil kesma esa balandlik (h).",
+            formula: "V = (1/3) · π · R² · h   |   S_yon = π · R · l",
+            question: "Asosining radiusi 3 sm va balandligi 4 sm bo‘lgan konusning yasovchisi (l) nechaga teng?",
+            options: [
+                { text: "A) 5 sm", correct: true },
+                { text: "B) 7 sm", correct: false },
+                { text: "C) 12 sm", correct: false }
+            ]
+        },
+        {
+            id: 5,
+            category: "Geometriya",
+            subject: "Geometriya (11-sinf)",
+            shortName: "5. Shar va Sfera",
             title: "Aylanish Jismlari: Shar va Sfera",
             modelType: "sphere",
-            desc: "Yarim doirani uning diametri atrofida aylantirishdan hosil bo‘lgan jism shar deyiladi. Sariq kesma sharning radiusini (R), ko‘k halqa esa katta doira (ekvator) kesimini ko‘rsatadi.",
-            formula: "Shar hajmi: V = (4/3) · π · R³  |  Sfera yuzi: S = 4 · π · R²",
+            desc: "Yarim doirani diametri atrofida aylantirishdan hosil bo‘lgan jism. Sariq kesma radius (R), ko‘k halqa esa katta doira kesimini ko‘rsatadi.",
+            formula: "V = (4/3) · π · R³   |   S = 4 · π · R²",
             question: "Radiusi 3 sm bo‘lgan sferaning sirt yuzi nechaga teng?",
             options: [
                 { text: "A) 36π sm²", correct: true },
@@ -477,12 +659,14 @@
             ]
         },
         {
-            id: "biologiya",
+            id: 6,
+            category: "Biologiya",
             subject: "Biologiya (9-sinf)",
+            shortName: "6. DNK spirali",
             title: "DNK Qo‘sh Spirali Tuzilishi",
             modelType: "dna",
-            desc: "Dezoksiribonuklein kislota (DNK) — tirik organizmlarda irsiy axborotni saqlovchi va nasldan-naslga o‘tkazuvchi qo‘sh spiral shaklidagi makromolekula.",
-            formula: "Komplementarlik prinsipi: A = T (2 ta bog‘), G ≡ C (3 ta bog‘)",
+            desc: "Dezoksiribonuklein kislota (DNK) — irsiy axborotni saqlovchi va nasldan-naslga o‘tkazuvchi qo‘sh spiral shaklidagi makromolekula.",
+            formula: "Komplementarlik prinsipi: A = T (2 bog‘), G ≡ C (3 bog‘)",
             question: "DNK molekulasida Adenin (A) nukleotidi qaysi nukleotid bilan juftlashadi?",
             options: [
                 { text: "A) Timin (T)", correct: true },
@@ -491,13 +675,31 @@
             ]
         },
         {
-            id: "kimyo",
+            id: 7,
+            category: "Biologiya",
+            subject: "Biologiya (7-sinf)",
+            shortName: "7. Tirik hujayra",
+            title: "Eukariot Hujayraning Fazoviy Tuzilishi",
+            modelType: "cell",
+            desc: "Hujayra tashqi tomondan plazmatik membrana bilan o‘ralgan. Markazda binafsha rangda Yadro (irsiy markaz), atrofida esa to‘q sariq rangda energiya stansiyalari — Mitoxondriyalar joylashgan.",
+            formula: "Asosiy qismlar: Membrana + Sitoplazma + Yadro + Organoidlar",
+            question: "Hujayrani energiya (ATF) bilan ta’minlovchi organoid qaysi?",
+            options: [
+                { text: "A) Mitoxondriya", correct: true },
+                { text: "B) Ribosoma", correct: false },
+                { text: "C) Vakuola", correct: false }
+            ]
+        },
+        {
+            id: 8,
+            category: "Kimyo",
             subject: "Kimyo (8-sinf)",
+            shortName: "8. Suv (H₂O)",
             title: "Suv (H₂O) Molekulasining Fazoviy Tuzilishi",
-            modelType: "molecule",
-            desc: "Suv molekulasi bitta kislorod (qizil) va ikkita vodorod (oq) atomidan iborat bo‘lib, atomlar o‘zaro 104.5° burchak ostida kovalent qutbli bog‘langan.",
-            formula: "Kimyoviy formulasi: H₂O  |  Valent burchagi: 104.5°",
-            question: "Suv molekulasidagi vodorod va kislorod atomlari orasidagi valent burchak necha gradus?",
+            modelType: "molecule_h2o",
+            desc: "Suv molekulasi bitta kislorod (qizil) va ikkita vodorod (oq) atomidan iborat bo‘lib, atomlar o‘zaro 104.5° burchak ostida burchakli shaklda joylashgan.",
+            formula: "Formula: H₂O   |   Valent burchagi: 104.5°",
+            question: "Suv molekulasidagi valent burchak necha gradusga teng?",
             options: [
                 { text: "A) 104.5°", correct: true },
                 { text: "B) 180°", correct: false },
@@ -505,11 +707,45 @@
             ]
         },
         {
-            id: "fizika",
+            id: 9,
+            category: "Kimyo",
+            subject: "Kimyo (9-sinf)",
+            shortName: "9. Metan (CH₄)",
+            title: "Metan (CH₄) Molekulasining Tetraedrik Tuzilishi",
+            modelType: "molecule_ch4",
+            desc: "Metan molekulasida uglerod atomi (qora) markazda, to‘rtta vodorod atomi (oq) esa muntazam tetraedr uchlarida 109°28' burchak ostida joylashgan.",
+            formula: "Formula: CH₄   |   Gibridlanish: sp³   |   Burchak: 109.5°",
+            question: "Metan molekulasidagi uglerod atomi qanday gibridlanish holatida bo‘ladi?",
+            options: [
+                { text: "A) sp³", correct: true },
+                { text: "B) sp²", correct: false },
+                { text: "C) sp", correct: false }
+            ]
+        },
+        {
+            id: 10,
+            category: "Kimyo",
+            subject: "Kimyo (8-sinf)",
+            shortName: "10. CO₂ gazi",
+            title: "Karbonat Angidrid (CO₂) Molekulasi",
+            modelType: "molecule_co2",
+            desc: "Uglerod (IV)-oksid molekulasida markaziy uglerod atomi ikkita kislorod atomi bilan qo‘sh kovalent bog‘ orqali birikib, 180° li chiziqli shakl hosil qiladi.",
+            formula: "Formula: O = C = O   |   Geometriyasi: Chiziqli (180°)",
+            question: "Karbonat angidrid (CO₂) molekulasining fazoviy shakli qanday?",
+            options: [
+                { text: "A) Chiziqli (180°)", correct: true },
+                { text: "B) Tetraedr (109.5°)", correct: false },
+                { text: "C) Burchakli (104.5°)", correct: false }
+            ]
+        },
+        {
+            id: 11,
+            category: "Fizika",
             subject: "Fizika (9-sinf)",
+            shortName: "11. Quyosh sistemasi",
             title: "Quyosh Sistemasi va Sayyoralar Harakati",
             modelType: "solar",
-            desc: "Sayyoralar Quyosh atrofida ellips shaklidagi orbitalar bo‘ylab butun olam tortishish kuchi ta’sirida harakatlanadi (Kepler qonunlari).",
+            desc: "Sayyoralar Quyosh atrofida ellips shaklidagi orbitalar bo‘ylab butun olam tortishish kuchi ta’sirida harakatlanadi.",
             formula: "Butun olam tortishish qonuni: F = G · (m₁ · m₂) / r²",
             question: "Quyosh sistemasidagi Quyoshga eng yaqin sayyora qaysi?",
             options: [
@@ -521,18 +757,35 @@
     ];
 
     let currentIndex = 0;
+    let currentCategory = 'all';
     const modelCache = {};
 
-    function initApp() {
+    function renderTabs() {
         const tabsContainer = document.getElementById('topic-tabs');
+        tabsContainer.innerHTML = '';
         topics.forEach((topic, index) => {
-            const btn = document.createElement('button');
-            btn.className = 'tab-btn' + (index === 0 ? ' active' : '');
-            btn.innerText = `${index + 1}. ${topic.subject.split(' ')[0]}`;
-            btn.onclick = () => selectTopic(index);
-            tabsContainer.appendChild(btn);
+            if (currentCategory === 'all' || topic.category === currentCategory) {
+                const btn = document.createElement('button');
+                btn.className = 'tab-btn' + (index === currentIndex ? ' active' : '');
+                btn.innerText = topic.shortName;
+                btn.onclick = () => selectTopic(index);
+                tabsContainer.appendChild(btn);
+            }
         });
+    }
 
+    function filterByCategory(cat, btnElem) {
+        currentCategory = cat;
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btnElem.classList.add('active');
+
+        const firstMatch = topics.findIndex(t => cat === 'all' || t.category === cat);
+        if (firstMatch !== -1) {
+            selectTopic(firstMatch);
+        }
+    }
+
+    function initApp() {
         const urlParams = new URLSearchParams(window.location.search);
         const mParam = urlParams.get('mavzu');
         if (mParam && !isNaN(mParam) && mParam >= 1 && mParam <= topics.length) {
@@ -545,17 +798,14 @@
     function selectTopic(index) {
         currentIndex = index;
         const topic = topics[index];
-
-        document.querySelectorAll('.tab-btn').forEach((btn, i) => {
-            btn.classList.toggle('active', i === index);
-        });
+        renderTabs();
 
         document.getElementById('subject-name').innerText = topic.subject;
+        document.getElementById('topic-counter').innerText = `Mavzu: ${index + 1} / ${topics.length}`;
         document.getElementById('topic-title').innerText = topic.title;
         document.getElementById('topic-desc').innerText = topic.desc;
         document.getElementById('topic-formula').innerText = topic.formula;
 
-        // 3D modelni yuklash yoki generatsiya qilish
         const viewer = document.getElementById('ar-viewer');
         if (modelCache[topic.modelType]) {
             viewer.setAttribute('src', modelCache[topic.modelType]);
@@ -566,7 +816,6 @@
             });
         }
 
-        // Testni yangilash
         document.getElementById('quiz-question').innerText = topic.question;
         const optionsDiv = document.getElementById('quiz-options');
         const feedbackDiv = document.getElementById('quiz-feedback');
